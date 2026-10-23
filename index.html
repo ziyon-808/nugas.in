@@ -6,10 +6,21 @@
   <title>NugasIn — Pelacak Tugas & Deadline Mahasiswa</title>
   <meta name="description" content="NugasIn: kumpulkan tugas dari semua grup chat ke satu papan Kanban dengan indikator deadline berwarna." />
 
+  <!-- Terapkan tema sebelum halaman tampil agar tidak berkedip -->
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('nugasin-theme');
+      if (savedTheme === 'dark' || (!savedTheme && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) { /* abaikan, pakai mode terang */ }
+  </script>
+
   <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: { sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
@@ -34,6 +45,65 @@
     .drop-active { outline: 2px dashed #6366f1; outline-offset: -6px; background-color: #eef2ff; }
     .toast-in { animation: slideIn .3s ease-out; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+    /* ============ DARK MODE ============
+       Menimpa class Tailwind yang dipakai saat <html class="dark"> */
+    .dark { color-scheme: dark; }
+    .dark body.bg-slate-50 { background-color: #020617; }
+    .dark input, .dark select { background-color: transparent; }
+
+    /* Latar */
+    .dark .bg-white, .dark .focus\:bg-white:focus { background-color: #0f172a; }
+    .dark .bg-white\/80 { background-color: rgb(15 23 42 / .8); }
+    .dark .bg-slate-50, .dark .bg-slate-100, .dark .hover\:bg-slate-50:hover { background-color: #1e293b; }
+    .dark .hover\:bg-slate-100:hover { background-color: #334155; }
+    .dark .bg-slate-100\/80 { background-color: rgb(15 23 42 / .7); }
+    .dark .bg-slate-200\/70 { background-color: #1e293b; }
+    .dark #mobileTabs .bg-white { background-color: #334155; }
+    .dark .bg-slate-900 { background-color: #4f46e5; border-color: #4f46e5; }
+    .dark .drop-active { background-color: rgb(99 102 241 / .12); }
+
+    /* Teks */
+    .dark .text-slate-900 { color: #f1f5f9; }
+    .dark .text-slate-800 { color: #e2e8f0; }
+    .dark .text-slate-700, .dark .text-slate-600 { color: #cbd5e1; }
+    .dark .text-slate-500 { color: #94a3b8; }
+    .dark .text-slate-400 { color: #7b8ba1; }
+
+    /* Garis */
+    .dark .border-slate-200, .dark .border-slate-100 { border-color: #1e293b; }
+    .dark .hover\:border-slate-400:hover { border-color: #475569; }
+
+    /* Kartu tugas sedikit lebih terang dari kolomnya */
+    .dark .task-card { background-color: #1e293b; border-color: #334155; }
+    .dark .task-card .border-slate-100 { border-color: #334155; }
+
+    /* Warna brand */
+    .dark .text-brand-600 { color: #818cf8; }
+    .dark .text-brand-700 { color: #a5b4fc; }
+    .dark .bg-brand-50, .dark .peer:checked ~ .peer-checked\:bg-brand-50 { background-color: rgb(99 102 241 / .15); }
+    .dark .hover\:bg-brand-100:hover { background-color: rgb(99 102 241 / .25); }
+    .dark .peer:checked ~ .peer-checked\:text-brand-700 { color: #a5b4fc; }
+    .dark .focus\:ring-brand-100:focus { --tw-ring-color: rgb(99 102 241 / .3); }
+
+    /* Badge mata kuliah & indikator deadline: latar transparan, teks lebih terang */
+    .dark .bg-sky-100     { background-color: rgb(14 165 233 / .18); }  .dark .text-sky-700     { color: #7dd3fc; }
+    .dark .bg-violet-100  { background-color: rgb(139 92 246 / .18); }  .dark .text-violet-700  { color: #c4b5fd; }
+    .dark .bg-fuchsia-100 { background-color: rgb(217 70 239 / .18); }  .dark .text-fuchsia-700 { color: #f0abfc; }
+    .dark .bg-teal-100    { background-color: rgb(20 184 166 / .18); }  .dark .text-teal-700    { color: #5eead4; }
+    .dark .bg-orange-100  { background-color: rgb(249 115 22 / .18); }  .dark .text-orange-700  { color: #fdba74; }
+    .dark .bg-rose-100    { background-color: rgb(244 63 94 / .18); }   .dark .text-rose-700    { color: #fda4af; }
+    .dark .bg-amber-100   { background-color: rgb(245 158 11 / .18); }  .dark .text-amber-700   { color: #fcd34d; }
+    .dark .bg-emerald-100 { background-color: rgb(16 185 129 / .18); }  .dark .text-emerald-700 { color: #6ee7b7; }
+    .dark .hover\:bg-rose-50:hover { background-color: rgb(244 63 94 / .15); }
+
+    /* Ikon & angka statistik */
+    .dark .text-rose-600    { color: #fb7185; }
+    .dark .text-amber-600   { color: #fbbf24; }
+    .dark .text-emerald-600 { color: #34d399; }
+    .dark .text-green-600   { color: #4ade80; }
+    .dark .text-sky-600     { color: #38bdf8; }
+    .dark .text-indigo-600  { color: #818cf8; }
   </style>
 </head>
 
@@ -56,6 +126,9 @@
       </div>
 
       <div class="ml-auto flex items-center gap-2">
+        <button id="btnTheme" class="w-10 h-10 rounded-xl hover:bg-slate-100 grid place-items-center text-slate-600" aria-label="Mode gelap">
+          <i class="fa-solid fa-moon"></i>
+        </button>
         <button id="btnNotif" class="relative w-10 h-10 rounded-xl hover:bg-slate-100 grid place-items-center text-slate-600" aria-label="Notifikasi">
           <i class="fa-regular fa-bell"></i>
           <span id="notifDot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
@@ -573,6 +646,19 @@
       e.preventDefault();
       moveTask(draggedId, col.dataset.column);
     });
+
+    // Toggle dark mode (disimpan di browser)
+    function syncThemeButton() {
+      const dark = document.documentElement.classList.contains('dark');
+      $('#btnTheme').innerHTML = `<i class="fa-solid ${dark ? 'fa-sun' : 'fa-moon'}"></i>`;
+      $('#btnTheme').setAttribute('aria-label', dark ? 'Mode terang' : 'Mode gelap');
+    }
+    $('#btnTheme').addEventListener('click', () => {
+      const dark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('nugasin-theme', dark ? 'dark' : 'light'); } catch (e) { /* mode private */ }
+      syncThemeButton();
+    });
+    syncThemeButton();
 
     // Tombol-tombol simulasi
     $('#btnNotif').addEventListener('click', () => {
