@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NugasIn — Pelacak Tugas & Deadline Mahasiswa</title>
+  <meta name="description" content="NugasIn: kumpulkan tugas dari semua grup chat ke satu papan Kanban dengan indikator deadline berwarna." />
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Font & Ikon -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { scrollbar-width: none; }
+    .card-enter { animation: pop .25s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+    .drop-active { outline: 2px dashed #6366f1; outline-offset: -6px; background-color: #eef2ff; }
+    .toast-in { animation: slideIn .3s ease-out; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
+
+  <!-- ============ HEADER ============ -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+      <a href="#" class="flex items-center gap-2 shrink-0">
+        <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-white grid place-items-center shadow-md shadow-brand-500/30">
+          <i class="fa-solid fa-list-check"></i>
+        </span>
+        <span class="font-extrabold text-lg tracking-tight">Nugas<span class="text-brand-600">In</span></span>
+      </a>
+
+      <div class="relative flex-1 max-w-md ml-2 hidden sm:block">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="searchInput" type="search" placeholder="Cari tugas…"
+          class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100 border border-transparent focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none text-sm transition" />
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button id="btnNotif" class="relative w-10 h-10 rounded-xl hover:bg-slate-100 grid place-items-center text-slate-600" aria-label="Notifikasi">
+          <i class="fa-regular fa-bell"></i>
+          <span id="notifDot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
+        </button>
+        <button id="btnAdd" class="hidden sm:inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-md shadow-brand-600/20 transition">
+          <i class="fa-solid fa-plus"></i> Tambah Tugas
+        </button>
+        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Nugas" alt="Avatar" class="w-9 h-9 rounded-full bg-brand-100 border border-slate-200" />
+      </div>
+    </div>
+
+    <!-- Search versi HP -->
+    <div class="sm:hidden px-4 pb-3">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="searchInputMobile" type="search" placeholder="Cari tugas…"
+          class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100 focus:bg-white border border-transparent focus:border-brand-500 outline-none text-sm" />
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ============ SAPAAN + STATISTIK ============ -->
+    <section class="grid gap-4 lg:grid-cols-[1.3fr_2fr]">
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/20 relative overflow-hidden">
+        <i class="fa-solid fa-graduation-cap absolute -right-4 -bottom-6 text-[120px] opacity-10"></i>
+        <p class="text-sm/6 opacity-80" id="todayLabel">Hari ini</p>
+        <h1 class="text-2xl font-extrabold mt-1">Halo, Mahasiswa! 👋</h1>
+        <p class="mt-2 text-sm opacity-90 max-w-sm">
+          Semua tugas dari grup WhatsApp, LINE, & LMS kini ada di satu tempat. Ada
+          <span id="urgentInline" class="font-bold underline decoration-amber-300 decoration-2">0 tugas</span> yang perlu segera dikerjakan.
+        </p>
+        <button id="btnImport" class="mt-4 inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-sm font-semibold px-3 py-2 rounded-lg transition">
+          <i class="fa-brands fa-whatsapp"></i> Impor dari Grup Chat
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">TOTAL <i class="fa-solid fa-layer-group"></i></div>
+          <p id="statTotal" class="text-3xl font-extrabold mt-2">0</p>
+          <p class="text-xs text-slate-400">tugas aktif & selesai</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200">
+          <div class="flex items-center justify-between text-rose-500 text-xs font-semibold">MENDESAK <i class="fa-solid fa-fire"></i></div>
+          <p id="statUrgent" class="text-3xl font-extrabold mt-2 text-rose-600">0</p>
+          <p class="text-xs text-slate-400">deadline ≤ 1 hari</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200">
+          <div class="flex items-center justify-between text-amber-500 text-xs font-semibold">MINGGU INI <i class="fa-regular fa-calendar"></i></div>
+          <p id="statWeek" class="text-3xl font-extrabold mt-2 text-amber-600">0</p>
+          <p class="text-xs text-slate-400">deadline ≤ 7 hari</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200">
+          <div class="flex items-center justify-between text-emerald-500 text-xs font-semibold">PROGRES <i class="fa-solid fa-chart-simple"></i></div>
+          <p id="statProgress" class="text-3xl font-extrabold mt-2 text-emerald-600">0%</p>
+          <div class="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+            <div id="progressBar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FILTER MATA KULIAH ============ -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h2 class="font-bold text-slate-700"><i class="fa-solid fa-filter text-brand-500 mr-1"></i> Filter Mata Kuliah</h2>
+        <!-- Legenda indikator deadline -->
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>≤ 1 hari</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>2–3 hari</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>&gt; 3 hari</span>
+        </div>
+      </div>
+      <div id="courseFilters" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+    </section>
+
+    <!-- ============ TAB KOLOM (khusus HP) ============ -->
+    <nav id="mobileTabs" class="md:hidden grid grid-cols-3 bg-slate-200/70 p-1 rounded-xl text-sm font-semibold"></nav>
+
+    <!-- ============ PAPAN KANBAN ============ -->
+    <section id="board" class="grid md:grid-cols-3 gap-4 items-start"></section>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-slate-400">
+    NugasIn — Mockup MVP · Data bersifat dummy & tersimpan di browser kamu.
+    <button id="btnReset" class="ml-1 underline hover:text-brand-600">Reset data demo</button>
+  </footer>
+
+  <!-- Tombol tambah melayang (HP) -->
+  <button id="fabAdd" class="sm:hidden fixed bottom-5 right-5 z-30 w-14 h-14 rounded-2xl bg-brand-600 text-white text-xl shadow-xl shadow-brand-600/40 grid place-items-center" aria-label="Tambah tugas">
+    <i class="fa-solid fa-plus"></i>
+  </button>
+
+  <!-- ============ MODAL TAMBAH TUGAS ============ -->
+  <div id="taskModal" class="fixed inset-0 z-40 hidden">
+    <div data-close class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:m-auto sm:h-fit w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 card-enter">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold">Tambah Tugas Baru</h3>
+        <button data-close class="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="taskForm" class="space-y-4">
+        <div>
+          <label class="text-sm font-semibold text-slate-600">Judul tugas</label>
+          <input name="taskTitle" required maxlength="80" placeholder="cth. Laporan Praktikum Modul 3"
+            class="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm font-semibold text-slate-600">Mata kuliah</label>
+            <select name="course" id="courseSelect" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 outline-none bg-white"></select>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-slate-600">Deadline</label>
+            <input name="due" type="date" required
+              class="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-600">Sumber info</label>
+          <div id="sourceOptions" class="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" data-close class="flex-1 py-2.5 rounded-xl border border-slate-200 font-semibold hover:bg-slate-50">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL DETAIL TUGAS ============ -->
+  <div id="detailModal" class="fixed inset-0 z-40 hidden">
+    <div data-close class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div id="detailBody" class="absolute inset-x-0 bottom-0 sm:inset-0 sm:m-auto sm:h-fit w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 card-enter"></div>
+  </div>
+
+  <!-- Wadah notifikasi toast -->
+  <div id="toastContainer" class="fixed z-50 bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 flex flex-col gap-2 w-[calc(100%-2rem)] sm:w-80"></div>
+
+  <!-- ================================================================
+       JAVASCRIPT — simulasi interaksi (tanpa backend)
+       ================================================================ -->
+  <script>
+    // ---------- Data master ----------
+    const COURSES = {
+      web:    { name: 'Pemrograman Web', badge: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
+      basdat: { name: 'Basis Data',      badge: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
+      strukdat:{ name: 'Struktur Data',  badge: 'bg-fuchsia-100 text-fuchsia-700', dot: 'bg-fuchsia-500' },
+      stat:   { name: 'Statistika',      badge: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-500' },
+      jarkom: { name: 'Jaringan Komputer', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' }
+    };
+
+    const SOURCES = {
+      wa:    { name: 'WhatsApp', icon: 'fa-brands fa-whatsapp', color: 'text-emerald-600' },
+      line:  { name: 'LINE',     icon: 'fa-brands fa-line',     color: 'text-green-600' },
+      tele:  { name: 'Telegram', icon: 'fa-brands fa-telegram', color: 'text-sky-600' },
+      lms:   { name: 'LMS/E-Learning', icon: 'fa-solid fa-building-columns', color: 'text-indigo-600' }
+    };
+
+    const COLUMNS = [
+      { id: 'todo',  title: 'Belum',      icon: 'fa-regular fa-circle',        accent: 'bg-slate-400' },
+      { id: 'doing', title: 'Dikerjakan', icon: 'fa-solid fa-spinner',         accent: 'bg-brand-500' },
+      { id: 'done',  title: 'Selesai',    icon: 'fa-solid fa-circle-check',    accent: 'bg-emerald-500' }
+    ];
+
+    // ---------- Utilitas tanggal ----------
+    const DAY = 86400000;
+    const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+    const isoFromOffset = (n) => {
+      const d = new Date(startOfToday().getTime() + n * DAY);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    const daysLeft = (iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return Math.round((new Date(y, m - 1, d) - startOfToday()) / DAY);
+    };
+    const formatDate = (iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    // Indikator deadline berwarna
+    function deadlineInfo(task) {
+      if (task.status === 'done') return { label: 'Selesai', cls: 'bg-slate-100 text-slate-500', bar: 'bg-slate-300', icon: 'fa-check' };
+      const n = daysLeft(task.due);
+      if (n < 0)   return { label: `Telat ${-n} hari`, cls: 'bg-rose-600 text-white', bar: 'bg-rose-600', icon: 'fa-triangle-exclamation' };
+      if (n === 0) return { label: 'Hari ini!', cls: 'bg-rose-100 text-rose-700', bar: 'bg-rose-500', icon: 'fa-fire' };
+      if (n === 1) return { label: 'Besok', cls: 'bg-rose-100 text-rose-700', bar: 'bg-rose-500', icon: 'fa-fire' };
+      if (n <= 3)  return { label: `${n} hari lagi`, cls: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400', icon: 'fa-hourglass-half' };
+      return { label: `${n} hari lagi`, cls: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', icon: 'fa-calendar-check' };
+    }
+
+    // ---------- Data dummy (tanggal relatif terhadap hari ini, jadi demo selalu "fresh") ----------
+    const seedTasks = () => [
+      { id: 1, title: 'Landing page portofolio (HTML + CSS)', course: 'web',    due: isoFromOffset(1),  status: 'doing', source: 'wa' },
+      { id: 2, title: 'ERD sistem perpustakaan',              course: 'basdat', due: isoFromOffset(0),  status: 'todo',  source: 'lms' },
+      { id: 3, title: 'Implementasi Linked List di C++',       course: 'strukdat', due: isoFromOffset(3), status: 'todo', source: 'line' },
+      { id: 4, title: 'Kuis distribusi normal',               course: 'stat',   due: isoFromOffset(6),  status: 'todo',  source: 'lms' },
+      { id: 5, title: 'Laporan praktikum subnetting',         course: 'jarkom', due: isoFromOffset(2),  status: 'doing', source: 'tele' },
+      { id: 6, title: 'Query JOIN & GROUP BY (Modul 4)',      course: 'basdat', due: isoFromOffset(9),  status: 'todo',  source: 'wa' },
+      { id: 7, title: 'Resume materi Big-O Notation',         course: 'strukdat', due: isoFromOffset(-2), status: 'done', source: 'wa' },
+      { id: 8, title: 'Wireframe UI aplikasi kelompok',       course: 'web',    due: isoFromOffset(-1), status: 'done',  source: 'line' },
+      { id: 9, title: 'Tugas rangkuman jurnal statistika',    course: 'stat',   due: isoFromOffset(-1), status: 'todo',  source: 'wa' }
+    ];
+
+    // ---------- State ----------
+    const STORAGE_KEY = 'nugasin-tasks-v1';
+    let tasks = load();
+    let activeCourse = 'all';
+    let searchQuery = '';
+    let mobileTab = 'todo';
+
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (Array.isArray(saved) && saved.length) return saved;
+      } catch (e) { /* abaikan, pakai data dummy */ }
+      return seedTasks();
+    }
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) { /* mode private */ }
+    }
+
+    const $ = (sel) => document.querySelector(sel);
+    const escapeHTML = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    // ---------- Toast notifikasi ----------
+    function toast(message, type = 'info') {
+      const styles = {
+        info:    ['fa-circle-info', 'text-brand-600'],
+        success: ['fa-circle-check', 'text-emerald-600'],
+        warn:    ['fa-triangle-exclamation', 'text-amber-500'],
+        danger:  ['fa-trash-can', 'text-rose-600']
+      }[type];
+      const el = document.createElement('div');
+      el.className = 'toast-in flex items-start gap-3 bg-white border border-slate-200 shadow-xl rounded-xl px-4 py-3 text-sm';
+      el.innerHTML = `<i class="fa-solid ${styles[0]} ${styles[1]} mt-0.5"></i><span class="flex-1">${message}</span>`;
+      $('#toastContainer').appendChild(el);
+      setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2800);
+    }
+
+    // ---------- Render ----------
+    function filteredTasks() {
+      return tasks.filter((t) =>
+        (activeCourse === 'all' || t.course === activeCourse) &&
+        t.title.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    function renderFilters() {
+      const chip = (key, label, dot, count) => {
+        const active = activeCourse === key;
+        return `<button data-course="${key}" class="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold border transition
+          ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}">
+          ${dot ? `<span class="w-2 h-2 rounded-full ${dot}"></span>` : '<i class="fa-solid fa-border-all text-xs"></i>'}
+          ${label}<span class="text-xs ${active ? 'text-white/60' : 'text-slate-400'}">${count}</span></button>`;
+      };
+      let html = chip('all', 'Semua', null, tasks.length);
+      for (const [key, c] of Object.entries(COURSES)) {
+        html += chip(key, c.name, c.dot, tasks.filter((t) => t.course === key).length);
+      }
+      $('#courseFilters').innerHTML = html;
+    }
+
+    function cardHTML(t) {
+      const c = COURSES[t.course], s = SOURCES[t.source], d = deadlineInfo(t);
+      const colIndex = COLUMNS.findIndex((col) => col.id === t.status);
+      return `
+      <article draggable="true" data-id="${t.id}"
+        class="task-card card-enter group relative bg-white rounded-xl border border-slate-200 p-4 pl-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition cursor-grab active:cursor-grabbing ${t.status === 'done' ? 'opacity-70' : ''}">
+        <span class="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full ${d.bar}"></span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${c.badge}">${c.name}</span>
+          <i class="${s.icon} ${s.color}" title="Dari ${s.name}"></i>
+        </div>
+        <h4 class="mt-2 font-semibold leading-snug ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escapeHTML(t.title)}</h4>
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg ${d.cls}">
+            <i class="fa-solid ${d.icon}"></i>${d.label}
+          </span>
+          <span class="text-xs text-slate-400">${formatDate(t.due)}</span>
+        </div>
+        <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1">
+          <button data-move="-1" ${colIndex === 0 ? 'disabled' : ''} class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent" title="Pindah ke kiri"><i class="fa-solid fa-arrow-left"></i></button>
+          <button data-move="1" ${colIndex === 2 ? 'disabled' : ''} class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent" title="Pindah ke kanan"><i class="fa-solid fa-arrow-right"></i></button>
+          <button data-delete class="ml-auto w-8 h-8 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Hapus"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </article>`;
+    }
+
+    function renderBoard() {
+      const list = filteredTasks();
+      $('#board').innerHTML = COLUMNS.map((col) => {
+        // Urutkan dari deadline terdekat
+        const items = list.filter((t) => t.status === col.id).sort((a, b) => a.due.localeCompare(b.due));
+        const hiddenOnMobile = col.id !== mobileTab ? 'hidden md:block' : '';
+        return `
+        <div data-column="${col.id}" class="column ${hiddenOnMobile} bg-slate-100/80 rounded-2xl p-3 min-h-[200px] transition">
+          <div class="flex items-center gap-2 px-1 pb-3">
+            <span class="w-2.5 h-2.5 rounded-full ${col.accent}"></span>
+            <h3 class="font-bold text-slate-700">${col.title}</h3>
+            <span class="ml-auto text-xs font-bold bg-white text-slate-500 px-2 py-0.5 rounded-full">${items.length}</span>
+          </div>
+          <div class="space-y-3">
+            ${items.map(cardHTML).join('') || `
+              <div class="text-center text-sm text-slate-400 py-10 border-2 border-dashed border-slate-200 rounded-xl">
+                <i class="fa-regular fa-face-smile-beam text-2xl mb-2 block"></i>Tidak ada tugas di sini
+              </div>`}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderTabs() {
+      $('#mobileTabs').innerHTML = COLUMNS.map((col) => {
+        const count = filteredTasks().filter((t) => t.status === col.id).length;
+        const active = col.id === mobileTab;
+        return `<button data-tab="${col.id}" class="py-2 rounded-lg transition ${active ? 'bg-white shadow text-slate-900' : 'text-slate-500'}">
+          ${col.title} <span class="text-xs opacity-60">${count}</span></button>`;
+      }).join('');
+    }
+
+    function renderStats() {
+      const active = tasks.filter((t) => t.status !== 'done');
+      const urgent = active.filter((t) => daysLeft(t.due) <= 1).length;
+      const week = active.filter((t) => daysLeft(t.due) <= 7).length;
+      const done = tasks.length - active.length;
+      const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+      $('#statTotal').textContent = tasks.length;
+      $('#statUrgent').textContent = urgent;
+      $('#statWeek').textContent = week;
+      $('#statProgress').textContent = pct + '%';
+      $('#progressBar').style.width = pct + '%';
+      $('#urgentInline').textContent = `${urgent} tugas`;
+    }
+
+    function render() {
+      renderFilters();
+      renderTabs();
+      renderBoard();
+      renderStats();
+    }
+
+    // ---------- Aksi tugas ----------
+    function moveTask(id, newStatus) {
+      const t = tasks.find((x) => x.id === id);
+      if (!t || t.status === newStatus) return;
+      t.status = newStatus;
+      save(); render();
+      const col = COLUMNS.find((c) => c.id === newStatus);
+      if (newStatus === 'done') toast(`🎉 Mantap! "<b>${escapeHTML(t.title)}</b>" selesai.`, 'success');
+      else toast(`Dipindah ke <b>${col.title}</b>`, 'info');
+    }
+
+    function deleteTask(id) {
+      const t = tasks.find((x) => x.id === id);
+      if (!t || !confirm(`Hapus tugas "${t.title}"?`)) return;
+      tasks = tasks.filter((x) => x.id !== id);
+      save(); render();
+      toast('Tugas dihapus', 'danger');
+    }
+
+    function openDetail(id) {
+      const t = tasks.find((x) => x.id === id);
+      const c = COURSES[t.course], s = SOURCES[t.source], d = deadlineInfo(t);
+      $('#detailBody').innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <span class="text-xs font-bold px-2 py-1 rounded-md ${c.badge}">${c.name}</span>
+          <button data-close class="w-9 h-9 -mt-1 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <h3 class="text-xl font-bold mt-3">${escapeHTML(t.title)}</h3>
+        <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-slate-50 rounded-xl p-3"><dt class="text-slate-400 text-xs">Deadline</dt><dd class="font-semibold mt-0.5">${formatDate(t.due)}</dd></div>
+          <div class="bg-slate-50 rounded-xl p-3"><dt class="text-slate-400 text-xs">Status deadline</dt>
+            <dd class="mt-1"><span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${d.cls}"><i class="fa-solid ${d.icon}"></i>${d.label}</span></dd></div>
+          <div class="bg-slate-50 rounded-xl p-3 col-span-2"><dt class="text-slate-400 text-xs">Sumber info</dt>
+            <dd class="font-semibold mt-0.5"><i class="${s.icon} ${s.color} mr-1"></i>${s.name}</dd></div>
+        </dl>
+        <p class="text-xs font-semibold text-slate-500 mt-5 mb-2">Pindahkan ke:</p>
+        <div class="grid grid-cols-3 gap-2">
+          ${COLUMNS.map((col) => `
+            <button data-set-status="${col.id}" data-id="${t.id}"
+              class="py-2 rounded-xl text-sm font-semibold border ${t.status === col.id ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 hover:bg-slate-50'}">
+              ${col.title}</button>`).join('')}
+        </div>
+        <button data-remind="${t.id}" class="mt-3 w-full py-2.5 rounded-xl bg-brand-50 text-brand-700 font-semibold hover:bg-brand-100">
+          <i class="fa-regular fa-bell mr-1"></i> Ingatkan saya H-1
+        </button>`;
+      openModal('#detailModal');
+    }
+
+    // ---------- Modal ----------
+    function openModal(sel) { $(sel).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    function closeModal(sel) { $(sel).classList.add('hidden'); document.body.style.overflow = ''; }
+
+    function openAddModal() {
+      $('#courseSelect').innerHTML = Object.entries(COURSES)
+        .map(([k, c]) => `<option value="${k}" ${k === activeCourse ? 'selected' : ''}>${c.name}</option>`).join('');
+      $('#sourceOptions').innerHTML = Object.entries(SOURCES).map(([k, s], i) => `
+        <label class="cursor-pointer">
+          <input type="radio" name="source" value="${k}" class="peer sr-only" ${i === 0 ? 'checked' : ''} />
+          <span class="flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600
+            peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-700">
+            <i class="${s.icon}"></i>${s.name.split('/')[0]}</span>
+        </label>`).join('');
+      $('#taskForm').reset();
+      $('#taskForm').due.value = isoFromOffset(3);
+      openModal('#taskModal');
+      setTimeout(() => $('#taskForm').taskTitle.focus(), 50);
+    }
+
+    // ---------- Event listeners ----------
+    $('#btnAdd').addEventListener('click', openAddModal);
+    $('#fabAdd').addEventListener('click', openAddModal);
+
+    $('#taskForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const task = {
+        id: Date.now(),
+        title: f.taskTitle.value.trim(),
+        course: f.course.value,
+        due: f.due.value,
+        source: f.source.value,
+        status: 'todo'
+      };
+      if (!task.title) return;
+      tasks.push(task);
+      mobileTab = 'todo';
+      save(); render(); closeModal('#taskModal');
+      toast(`Tugas "<b>${escapeHTML(task.title)}</b>" ditambahkan ✨`, 'success');
+    });
+
+    // Tutup modal: klik backdrop / tombol X / tombol Esc
+    document.querySelectorAll('#taskModal, #detailModal').forEach((m) =>
+      m.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeModal('#' + m.id); })
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeModal('#taskModal'); closeModal('#detailModal'); }
+    });
+
+    // Aksi di dalam modal detail
+    $('#detailModal').addEventListener('click', (e) => {
+      const statusBtn = e.target.closest('[data-set-status]');
+      if (statusBtn) { moveTask(Number(statusBtn.dataset.id), statusBtn.dataset.setStatus); closeModal('#detailModal'); }
+      if (e.target.closest('[data-remind]')) { toast('Pengingat H-1 diaktifkan 🔔 (simulasi)', 'success'); closeModal('#detailModal'); }
+    });
+
+    // Filter mata kuliah
+    $('#courseFilters').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-course]');
+      if (!btn) return;
+      activeCourse = btn.dataset.course;
+      render();
+    });
+
+    // Tab kolom (HP)
+    $('#mobileTabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tab]');
+      if (!btn) return;
+      mobileTab = btn.dataset.tab;
+      renderTabs(); renderBoard();
+    });
+
+    // Pencarian (desktop & HP disinkronkan)
+    ['#searchInput', '#searchInputMobile'].forEach((sel) =>
+      $(sel).addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        $('#searchInput').value = $('#searchInputMobile').value = e.target.value;
+        renderTabs(); renderBoard();
+      })
+    );
+
+    // Klik kartu: tombol pindah / hapus / buka detail
+    $('#board').addEventListener('click', (e) => {
+      const card = e.target.closest('.task-card');
+      if (!card) return;
+      const id = Number(card.dataset.id);
+      const moveBtn = e.target.closest('[data-move]');
+      if (moveBtn) {
+        const t = tasks.find((x) => x.id === id);
+        const idx = COLUMNS.findIndex((c) => c.id === t.status) + Number(moveBtn.dataset.move);
+        if (COLUMNS[idx]) moveTask(id, COLUMNS[idx].id);
+        return;
+      }
+      if (e.target.closest('[data-delete]')) return deleteTask(id);
+      openDetail(id);
+    });
+
+    // Drag & drop antar kolom (desktop)
+    let draggedId = null;
+    $('#board').addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.task-card');
+      if (!card) return;
+      draggedId = Number(card.dataset.id);
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => card.classList.add('opacity-40'), 0);
+    });
+    $('#board').addEventListener('dragend', () => {
+      draggedId = null;
+      document.querySelectorAll('.column').forEach((c) => c.classList.remove('drop-active'));
+      document.querySelectorAll('.task-card').forEach((c) => c.classList.remove('opacity-40'));
+    });
+    $('#board').addEventListener('dragover', (e) => {
+      const col = e.target.closest('.column');
+      if (!col || draggedId === null) return;
+      e.preventDefault();
+      document.querySelectorAll('.column').forEach((c) => c.classList.toggle('drop-active', c === col));
+    });
+    $('#board').addEventListener('drop', (e) => {
+      const col = e.target.closest('.column');
+      if (!col || draggedId === null) return;
+      e.preventDefault();
+      moveTask(draggedId, col.dataset.column);
+    });
+
+    // Tombol-tombol simulasi
+    $('#btnNotif').addEventListener('click', () => {
+      const urgent = tasks.filter((t) => t.status !== 'done' && daysLeft(t.due) <= 1);
+      $('#notifDot').classList.add('hidden');
+      if (!urgent.length) return toast('Tidak ada deadline mendesak. Santai dulu ☕', 'info');
+      urgent.slice(0, 3).forEach((t, i) =>
+        setTimeout(() => toast(`<b>${escapeHTML(t.title)}</b> — ${deadlineInfo(t).label}`, 'warn'), i * 250)
+      );
+    });
+
+    $('#btnImport').addEventListener('click', () => {
+      toast('Membaca pesan dari grup "TI-B 2024"… (simulasi)', 'info');
+      setTimeout(() => {
+        tasks.push({ id: Date.now(), title: 'Presentasi kelompok normalisasi DB', course: 'basdat', due: isoFromOffset(4), status: 'todo', source: 'wa' });
+        mobileTab = 'todo';
+        save(); render();
+        toast('1 tugas baru terdeteksi dari WhatsApp & ditambahkan!', 'success');
+      }, 1200);
+    });
+
+    $('#btnReset').addEventListener('click', () => {
+      tasks = seedTasks(); activeCourse = 'all'; save(); render();
+      toast('Data demo dikembalikan ke awal', 'info');
+    });
+
+    // ---------- Init ----------
+    $('#todayLabel').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    render();
+  </script>
+</body>
+</html>

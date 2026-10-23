@@ -1,0 +1,15 @@
+{
+  "name": "nugasin",
+  "version": "1.0.0",
+  "description": "NugasIn: Pelacak Tugas dan Deadline Mahasiswa (mockup MVP)",
+  "private": true,
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
